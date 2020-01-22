@@ -1,0 +1,151 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: csi-hostpath-registrar
+  namespace: kube-system
+  labels:
+    app: csi-hostpath-registrar
+spec:
+  selector:
+    app: csi-hostpath-registrar
+  ports: 
+  - name: dummy
+    port: 12345
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-hostpath-registrar
+  namespace: kube-system
+spec:
+  serviceName: "csi-hostpath-registrar"
+  # One replica only:
+  # Host path driver only works when everything runs
+  # on a single node. We achieve that by starting it once and then
+  # co-locate all other pods via inter-pod affinity
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-hostpath-registrar
+  template:
+    metadata:
+      labels:
+        app: csi-hostpath-registrar
+    spec:
+      containers:
+      - name: node-driver-registrar
+        image: quay.io/k8scsi/csi-node-driver-registrar:canary
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "rm -rf /registration/$(DRIVER_NAME) /registration/$(DRIVER_NAME)-reg.sock"]
+        args:
+        - --v=10
+        - --csi-address=/csi/csi.sock
+        - --kubelet-registration-path=/var/lib/kubelet/plugins/$(DRIVER_NAME)/csi.sock
+        securityContext:
+          # This is necessary only for systems with SELinux, where
+          # non-privileged sidecar containers cannot access unit domain socket
+          # created by privileged CSI driver container.
+          privileged: true
+        env:
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: DRIVER_NAME
+          value: hostpath.csi.k8s.io
+        volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+        - mountPath: /registration
+          name: registration-dir
+        - mountPath: /csi-data-dir
+          name: csi-data-dir
+      - name: hostpath
+        image: c3y1huang/research:csi-hostpath-v0.0.3
+        args:
+        - "--endpoint=$(CSI_ENDPOINT)"
+        - "--nodeid=$(KUBE_NODE_NAME)"
+        - "--drivername=$(DRIVER_NAME)"
+        - "--v=10"
+        env:
+        - name: CSI_ENDPOINT
+          value: unix:///csi/csi.sock
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: DRIVER_NAME
+          value: hostpath.csi.k8s.io
+        securityContext:
+          privileged: true
+        ports:
+        - containerPort: 9898
+          name: healthz
+          protocol: TCP
+        # livenessProbe:
+        #   failureThreshold: 5
+        #   httpGet:
+        #     path: /healthz
+        #     port: healthz
+        #   initialDelaySeconds: 10
+        #   timeoutSeconds: 10
+        #   periodSeconds: 5
+        volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+        - mountPath: /var/lib/kubelet/pods
+          mountPropagation: Bidirectional
+          name: mountpoint-dir
+        - mountPath: /var/lib/kubelet/plugins
+          mountPropagation: Bidirectional
+          name: plugins-dir
+        - mountPath: /csi-data-dir
+          name: csi-data-dir
+        - mountPath: /dev
+          name: dev-dir
+      # - name: liveness-probe
+      #   volumeMounts:
+      #   - mountPath: /csi
+      #     name: socket-dir
+      #   securityContext:
+      #     # This is necessary only for system with SELinux, where
+      #     # non-privileged sidecare containers cannot access unix domain socket
+      #     # created by privileged CSI driver container.
+      #     privileged: true
+      #   image: quay.io/k8scsi/livenessprobe:v1.1.0
+      #   args:
+      #   - --csi-address=/csi/csi.sock
+      #   - --health-port=9898
+
+      volumes:
+      - hostPath:
+          path: /var/lib/kubelet/plugins/hostpath.csi.k8s.io
+          type: DirectoryOrCreate
+        name: socket-dir
+      - hostPath:
+          path: /var/lib/kubelet/pods
+          type: DirectoryOrCreate
+        name: mountpoint-dir
+      - hostPath:
+          path: /var/lib/kubelet/plugins_registry
+          type: Directory
+        name: registration-dir
+      - hostPath:
+          path: /var/lib/kubelet/plugins
+          type: Directory
+        name: plugins-dir
+      - hostPath:
+          # 'path' is where PV data is persisted on host.
+          # using /tmp is also possible while the PVs will not available
+          # after plugin container recreation or host reboot
+          path: /var/lib/csi-hostpath-data/
+          type: DirectoryOrCreate
+        name: csi-data-dir
+      - hostPath:
+          path: /dev
+          type: Directory
+        name: dev-dir

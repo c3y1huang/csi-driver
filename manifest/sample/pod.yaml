@@ -1,0 +1,17 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: sample
+  namespace: kube-system
+spec:
+  containers:
+  - name: sample
+    image: busybox
+    volumeMounts:
+    - mountPath: "/data"
+      name: csi-volume
+    command: [ "sleep", "infinity" ]
+  volumes:
+  - name: csi-volume
+    persistentVolumeClaim:
+      claimName: csi-pvc
