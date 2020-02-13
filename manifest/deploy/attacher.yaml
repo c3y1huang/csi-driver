@@ -1,0 +1,61 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: csi-hostpath-attacher
+  namespace: kube-system
+  labels:
+    app: csi-hostpath-attacher
+spec:
+  selector:
+    app: csi-hostpath-attacher
+  ports:
+  - name: dummy
+    port: 12345
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata: 
+  name: csi-hostpath-attacher
+  namespace: kube-system
+spec:
+  serviceName: "csi-hostpath-attacher"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-hostpath-attacher
+  template:
+    metadata:
+      labels:
+        app: csi-hostpath-attacher
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - csi-hostpath-registrar
+            topologyKey: kubernetes.io/hostname
+      serviceAccountName: csi-attacher
+      containers:
+      - name: csi-attacher
+        image: quay.io/k8scsi/csi-attacher:v2.0.0
+        args:
+        - --v=5
+        - --csi-address=/csi/csi.sock
+        securityContext:
+          # This is necessary only for system with SELinux, where
+          # non-privileged sidecar containers cannot access unix domain socket
+          # created by privileged CSI driver container.
+          privileged: true
+        volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+        
+      volumes:
+      - hostPath:
+          path: /var/lib/kubelet/plugins/hostpath.csi.k8s.io
+          type: DirectoryOrCreate
+        name: socket-dir
