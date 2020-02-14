@@ -1,5 +1,5 @@
 # Sample CSI Driver
-The purpose of this branch is to help me understand how CSI works with Kubernetest with actual hands on. 
+The purpose of this branch is to help me understand how CSI works with Kubernetest with hands on implementation. 
 
 The driver codes is mostly taken from `kubernetes-csi`.
 
