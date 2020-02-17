@@ -1,0 +1,16 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: csi-pvc
+  namespace: kube-system
+spec:
+  dataSource:
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+    name: csi-hostpath-snapshot
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: csi-hostpath-sc

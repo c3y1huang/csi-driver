@@ -1,0 +1,58 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: csi-hostpath-snapshotter
+  namespace: kube-system
+  labels:
+    app: csi-hostpath-snapshotter
+spec:
+  selector:
+    app: csi-hostpath-snapshotter
+  ports:
+  - name: dummy
+    port: 12345
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-hostpath-snapshotter
+  namespace: kube-system
+spec:
+  serviceName: "csi-hostpath-snapshotter"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-hostpath-snapshotter
+  template:
+    metadata:
+      labels:
+        app: csi-hostpath-snapshotter
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - csi-hostpath-registrar
+            topologyKey: kubernetes.io/hostname
+      serviceAccount: csi-snapshotter
+      containers:
+      - name: csi-snapshotter
+        image: quay.io/k8scsi/csi-snapshotter:v1.2.0
+        args:
+        - -v=5
+        - --csi-address=/csi/csi.sock
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /csi
+          name: socket-dir
+      volumes:
+      - hostPath:
+          path: /var/lib/kubelet/plugins/hostpath.csi.k8s.io
+          type: DirectoryOrCreate
+        name: socket-dir
+
