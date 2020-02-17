@@ -162,3 +162,4 @@ Plugin for this example is build to single binary and deployed in `registrar`.
 
 ## Unfinished Business
 * Go through [csi-api](https://github.com/kubernetes/csi-api) to understand how Kubernetes implement CSI CRD.
+* Go through [external-provisioner](https://github.com/kubernetes-csi/external-provisioner), [external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter), [external-attacher](https://github.com/kubernetes-csi/external-attacher) to understand how each sidecar works.
