@@ -89,13 +89,13 @@ $ csc controller list-volumes --endpoint tcp://127.0.0.1:10000
 
 ### Deploy
 ```
-$ kubectl create -f ./manifest/.
+$ kubectl create -f ./manifest/deploy/.
 ```
 
 ### Verify
 1. Check CSI resources are `Running`.
 ```
-kubectl -n kube-system get pods | grep csi
+$ kubectl -n kube-system get pods | grep csi
 csi-hostpath-attacher-0                               1/1     Running   0          47m
 csi-hostpath-provisioner-0                            1/1     Running   0          47m
 csi-hostpath-registrar-0                              2/2     Running   0          47m
