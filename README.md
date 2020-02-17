@@ -74,7 +74,7 @@ $ csc controller del --endpoint tcp://127.0.0.1:10000 <CSIVolumeID>
 $ csc controller list-volumes --endpoint tcp://127.0.0.1:10000
 ```
 
-## Kubernetes - Sizecard Containers
+## Kubernetes - Sidecar Containers
 
 ### Driver-registrar
 * register the CSI driver with kubelet
@@ -87,6 +87,11 @@ $ csc controller list-volumes --endpoint tcp://127.0.0.1:10000
 ### External-attacher
 * watches Kubernetes VolumeAttachment objects and triggers ControllerPublish/Unpublish against a CSI endpoint
 
+### External-snapshotter
+* watches for `VolumeSnapshotContent` create/update/delete events. It filters out these objects with `Driver==<CSI driver name>` specified in the associated VolumeSnapshotClass object and then processes these events in workqueues with exponential backoff.
+
+## Procedures
+
 ### Deploy
 ```
 $ kubectl create -f ./manifest/deploy/.
@@ -96,15 +101,14 @@ $ kubectl create -f ./manifest/deploy/.
 1. Check CSI resources are `Running`.
 ```
 $ kubectl -n kube-system get pods | grep csi
-csi-hostpath-attacher-0                               1/1     Running   0          47m
-csi-hostpath-provisioner-0                            1/1     Running   0          47m
-csi-hostpath-registrar-0                              2/2     Running   0          47m
+csi-hostpath-attacher-0                               1/1     Running   0          18s
+csi-hostpath-provisioner-0                            1/1     Running   0          17s
+csi-hostpath-registrar-0                              2/2     Running   0          16s
+csi-hostpath-snapshotter-0                            1/1     Running   0          14s
 ```
 2. Deploy sample resources.
 ```
-$ kubectl create -f ./manifest/sample/storage-class.yaml
-$ kubectl create -f ./manifest/sample/persistent-volume-claim.yaml
-$ kubectl create -f ./manifest/sample/pod.yaml
+$ kubectl create -f ./manifest/sample/.
 ```
 3. Check sample `Persistent Volume Claim` bonded to storage class.
 ```
@@ -153,6 +157,46 @@ Spec:
 Status:
   Attached:  true
 Events:      <none>
+```
+
+### Snapshot
+Since volume snapshot is an alpha feature in Kubernetes v1.12 to v1.16, you need to enable a new alpha feature gate called VolumeSnapshotDataSource in the Kubernetes master.
+```
+--feature-gates=VolumeSnapshotDataSource=true
+```
+Ref: https://kubernetes-csi.github.io/docs/snapshot-restore-feature.html
+
+1. Deploy snapshot resources.
+```
+$ kubectl create -f ./manifest/snapshot/.
+volumesnapshot.snapshot.storage.k8s.io/csi-hostpath-snapshot created
+```
+2. Check snapshot.
+```
+$ kubectl -n kube-system get volumesnapshot
+NAME                    AGE
+csi-hostpath-snapshot   10m
+
+$ kubectl -n kube-system get volumesnapshotcontent
+NAME                                               AGE
+snapcontent-99b5c4d9-4c9e-41b0-ad15-c8797bdc133d   11m
+```
+
+### Restore
+1. Delete sample resources.
+```
+$ kubectl delete -f ./manifest/sample/.
+```
+2. Restore sample resources.
+```
+$ kubectl create -f ./manifest/sample/storage-class.yaml
+$ kubectl create -f ./manifest/restore/persistent-volume-claim.yaml
+$ kubectl create -f ./manifest/sample/pod.yaml
+```
+3. Check `hellow.txt` file exist in the restored Pod.
+```
+$ kubectl -n kube-system exec -it sample -- sh -c "cat /data/hello.txt"
+I am here
 ```
 
 ## QA
