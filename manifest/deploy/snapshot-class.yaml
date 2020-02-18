@@ -5,3 +5,10 @@ metadata:
 #  annotations:
 #    snapshot.storage.kubernetes.io/is-default-class: "true"
 snapshotter: hostpath.csi.k8s.io
+#---
+#apiVersion: snapshot.storage.k8s.io/v1beta1
+#kind: VolumeSnapshotClass
+#metadata:
+#  name: csi-hostpath-snapshot
+#driver: hostpath.csi.k8s.io
+#deletionPolicy: Delete

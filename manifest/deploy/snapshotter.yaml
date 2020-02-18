@@ -43,8 +43,8 @@ spec:
       - name: csi-snapshotter
         image: quay.io/k8scsi/csi-snapshotter:v1.2.0
         args:
-        - -v=5
-        - --csi-address=/csi/csi.sock
+        - "-v=5"
+        - "--csi-address=/csi/csi.sock"
         securityContext:
           privileged: true
         volumeMounts:
@@ -55,4 +55,30 @@ spec:
           path: /var/lib/kubelet/plugins/hostpath.csi.k8s.io
           type: DirectoryOrCreate
         name: socket-dir
+
+#---
+#kind: StatefulSet
+#apiVersion: apps/v1
+#metadata:
+#  name: csi-hostpath-snapshotter
+#  namespace: kube-system
+#spec:
+#  serviceName: "csi-hostpath-snapshotter"
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: csi-hostpath-snapshotter
+#  template:
+#    metadata:
+#      labels:
+#        app: csi-hostpath-snapshotter
+#    spec:
+#      serviceAccount: csi-snapshotter
+#      containers:
+#      - name: csi-snapshotter
+#        image: quay.io/k8scsi/snapshot-controller:v2.0.0-rc4
+#        args:
+#        - "--v=5"
+#        - "--leader-election=false"
+#        imagePullPolicy: Always
 
