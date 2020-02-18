@@ -92,9 +92,25 @@ $ csc controller list-volumes --endpoint tcp://127.0.0.1:10000
 
 ## Procedures
 
+### Pre-requisite
+The volume snapshot is an alpha feature in Kubernetes v1.12 to v1.16, you may need to enable a new alpha feature gate called VolumeSnapshotDataSource in the Kubernetes master.
+```
+--feature-gates=VolumeSnapshotDataSource=true
+```
+Ref: https://kubernetes-csi.github.io/docs/snapshot-restore-feature.html
+
+
+With Kuberntest v1.17 and above, external-snapshotter 2.0 and higher, CRDs are no longer deployed by the csi-snapshotter.
+
+Install CRD If is not pre-installed in cluster. Ref: https://github.com/kubernetes-csi/external-snapshotter.
+```
+# https://github.com/kubernetes-csi/external-snapshotter/tree/master/config/crd
+kubectl create -f manifest/crd
+```
+
 ### Deploy
 ```
-$ kubectl create -f ./manifest/deploy/.
+$ kubectl create -f manifest/deploy
 ```
 
 ### Verify
@@ -108,7 +124,7 @@ csi-hostpath-snapshotter-0                            1/1     Running   0       
 ```
 2. Deploy sample resources.
 ```
-$ kubectl create -f ./manifest/sample/.
+$ kubectl create -f manifest/sample
 ```
 3. Check sample `Persistent Volume Claim` bonded to storage class.
 ```
@@ -160,15 +176,9 @@ Events:      <none>
 ```
 
 ### Snapshot
-Since volume snapshot is an alpha feature in Kubernetes v1.12 to v1.16, you need to enable a new alpha feature gate called VolumeSnapshotDataSource in the Kubernetes master.
-```
---feature-gates=VolumeSnapshotDataSource=true
-```
-Ref: https://kubernetes-csi.github.io/docs/snapshot-restore-feature.html
-
 1. Deploy snapshot resources.
 ```
-$ kubectl create -f ./manifest/snapshot/.
+$ kubectl create -f manifest/snapshot
 volumesnapshot.snapshot.storage.k8s.io/csi-hostpath-snapshot created
 ```
 2. Check snapshot.
@@ -185,15 +195,15 @@ snapcontent-99b5c4d9-4c9e-41b0-ad15-c8797bdc133d   11m
 ### Restore
 1. Delete sample resources.
 ```
-$ kubectl delete -f ./manifest/sample/.
+$ kubectl delete -f manifest/sample
 ```
 2. Restore sample resources.
 ```
-$ kubectl create -f ./manifest/sample/storage-class.yaml
-$ kubectl create -f ./manifest/restore/persistent-volume-claim.yaml
-$ kubectl create -f ./manifest/sample/pod.yaml
+$ kubectl create -f manifest/sample/storage-class.yaml
+$ kubectl create -f manifest/restore/persistent-volume-claim.yaml
+$ kubectl create -f manifest/sample/pod.yaml
 ```
-3. Check `hellow.txt` file exist in the restored Pod.
+3. Check `hello.txt` file exist in the restored Pod.
 ```
 $ kubectl -n kube-system exec -it sample -- sh -c "cat /data/hello.txt"
 I am here

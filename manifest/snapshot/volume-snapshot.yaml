@@ -8,3 +8,13 @@ spec:
   source:
     name: csi-pvc
     kind: PersistentVolumeClaim
+#---
+#kind: VolumeSnapshot
+#apiVersion: snapshot.storage.k8s.io/v1beta1
+#metadata:
+#  name: csi-hostpath-snapshot
+#  namespace: kube-system
+#spec:
+#  volumeSnapshotClassName: csi-hostpath-snapshot
+#  source:
+#    persistentVolumeClaimName: csi-pvc
